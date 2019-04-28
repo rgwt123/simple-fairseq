@@ -60,7 +60,7 @@ parser.add_argument("--decoder_normalize_before", type=bool, default=False,
                     help="decoder_normalize_before")
 parser.add_argument("--share_encdec_emb", type=bool, default=False,
                     help="share encoder and decoder embedding")
-parser.add_argument("--share_decpro_emb", type=bool, default=True,
+parser.add_argument("--share_decpro_emb", type=bool, default=False,
                     help="share decoder input and project embedding")
 parser.add_argument("--beam_size", type=int, default=6,
                     help="beam search size")
