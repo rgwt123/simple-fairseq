@@ -9,6 +9,7 @@ import random
 from src.model import build_mt_model
 from src.data.loader import load_data
 from src.trainer import TrainerMT
+from src.distributed_utils import suppress_output,is_master
 from tqdm import tqdm
 
 
@@ -27,7 +28,7 @@ def run(params, error_queue):
 
         encoder, decoder, num_updates = build_mt_model(params)
         trainer = TrainerMT(encoder, decoder, data, params, num_updates)
-        for i in range(trainer.epoch, 20):
+        for i in range(trainer.epoch, params.max_epoch):
             logger.info("==== Starting epoch %i ...====" % trainer.epoch)
             trainer.train_epoch()
             tqdm.write('Finish epcoh %i.' % i)
@@ -45,6 +46,7 @@ def init_processes(params, fn, error_queue):
     """ Initialize the distributed environment. """
     dist.init_process_group('nccl', init_method=params.init_method, rank=params.rank, world_size=params.gpu_num)
     logger.info('| distributed init (rank {}): {}'.format(params.rank, params.init_method))
+    suppress_output(is_master(params))
     fn(params, error_queue)
 
 

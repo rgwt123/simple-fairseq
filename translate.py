@@ -7,13 +7,13 @@ from src.data.loader import load_data
 import subprocess
 import re
 
-logger = create_logger('translate_raw.log')
+logger = create_logger('translate.log')
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 parser = argparse.ArgumentParser(description='Settings')
-parser.add_argument("--train_data", type=str, default='data/raw.bin',
+parser.add_argument("--train_data", type=str, default='',
                     help="train data dir")
-parser.add_argument("--max_len", type=int, default=50,
+parser.add_argument("--max_len", type=int, default=100,
                     help="max length of sentences")
 parser.add_argument("--reload_model", type=str, default='',
                     help="reload model")
@@ -60,23 +60,23 @@ parser.add_argument("--decoder_normalize_before", type=bool, default=False,
                     help="decoder_normalize_before")
 parser.add_argument("--share_encdec_emb", type=bool, default=False,
                     help="share encoder and decoder embedding")
-parser.add_argument("--share_decpro_emb", type=bool, default=False,
+parser.add_argument("--share_decpro_emb", type=bool, default=True,
                     help="share decoder input and project embedding")
-parser.add_argument("--beam_size", type=int, default=6,
+parser.add_argument("--beam_size", type=int, default=5,
                     help="beam search size")
 parser.add_argument("--length_penalty", type=float, default=1.0,
                     help="length penalty")
 parser.add_argument("--clip_grad_norm", type=float, default=5.0,
                     help="clip grad norm")
 parser.add_argument("--id",type=int, default=0)
-parser.add_argument("--checkpoint_dir", type=str, default='all_models/raw')
+parser.add_argument("--checkpoint_dir", type=str, default='all_models/en2de_samewithcontextbatch')
 params = parser.parse_args()
 params.gpu_num = 1
 params.seed = 1234
 params.reload_model = '{}/model_epoch{}.pt'.format(params.checkpoint_dir, params.id)
-params.translate_file = 'data/nist06.raw.bpe.cn'
-params.src_dico_file = 'data/dict.raw.bpe.cn'
-params.tgt_dico_file = 'data/dict.raw.bpe.en'
+params.translate_file = ''
+params.src_dico_file = 'data/vocab.zh'
+params.tgt_dico_file = 'data/vocab.en'
 params.out_file = '{}/predict_{}.en'.format(params.checkpoint_dir, params.id)
 if __name__ == '__main__':
     data = load_data(params, name='test')
@@ -88,17 +88,18 @@ if __name__ == '__main__':
     total = 0
     with torch.no_grad():
         for (sen1, len1) in iterator:
-            #len1, bak_order = len1.sort(descending=True)
-            #sen1 = sen1[:,bak_order]
+            len1, bak_order = len1.sort(descending=True)
+            sen1 = sen1[:,bak_order]
             sen1 = sen1.cuda()
             encoded = encoder(sen1, len1)
             sent2, len2, _ = decoder.generate(encoded)
             total += len2.size(0)
             logger.info('Translating %i sentences.' % total)
-            for j in range(len2.size(0)):
+            for j in bak_order.argsort().tolist():
                 file.write(params.tgt_dico.idx2string(sent2[:, j]).replace('@@ ', '')+'\n')
-
-    command = 'perl multi-bleu-detok.perl data/valid.bpe.en < {}'.format(params.out_file)
+    '''
+    # calculate bleu value
+    command = f'perl multi-bleu.perl ../data/en-de/newstest2018.de.tok < {params.out_file}'
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     result = p.communicate()[0].decode("utf-8")
     bleu = re.findall(r"BLEU = (.+?),", result)[0]
@@ -107,4 +108,4 @@ if __name__ == '__main__':
     file.close()
     with open('{}/bleu.log'.format(params.checkpoint_dir),'a+') as f:
         f.write(str(params.id)+' '+result)
-
+    '''

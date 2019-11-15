@@ -7,12 +7,12 @@ from src.data.dictionary import Dictionary
 if __name__ == '__main__':
     logger = create_logger(None)
 
-    src_voc_path = 'data_v2_20190408/dict.reptag.bpe.cn2en'
-    src_txt_path = 'data_v2_20190408/train.reptag.bpe.cn'
-    tgt_voc_path = 'data_v2_20190408/dict.reptag.bpe.cn2en'
-    tgt_txt_path = 'data_v2_20190408/train.reptag.bpe.en'
+    src_voc_path = 'data/vocab.zh'
+    src_txt_path = 'data/all.zh.bpe'
+    tgt_voc_path = 'data/vocab.en'
+    tgt_txt_path = 'data/all.en.bpe'
 
-    bin_path = 'data/reptag.bin'
+    bin_path = 'data/cwmt.bin'
     assert os.path.isfile(src_voc_path)
     assert os.path.isfile(src_txt_path)
     assert os.path.isfile(tgt_voc_path)

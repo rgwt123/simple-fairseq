@@ -149,8 +149,10 @@ class Dictionary(object):
             # index sentence words
             count_unk_s = 0
             count_unk_t = 0
+            count_unk_sdoc = 0
             indexed_s = []
             indexed_t = []
+            indexed_sdoc = []
             for w in s:
                 word_id = src_dico.index(w, no_unk=False)
                 if word_id < 4 and word_id != src_dico.unk_index:
@@ -173,7 +175,7 @@ class Dictionary(object):
             positions_s.append([len(sentences_s), len(sentences_s) + len(indexed_s)])
             sentences_s.extend(indexed_s)
             sentences_s.append(-1)
-
+            
             positions_t.append([len(sentences_t), len(sentences_t) + len(indexed_t)])
             sentences_t.extend(indexed_t)
             sentences_t.append(-1)

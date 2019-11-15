@@ -183,8 +183,10 @@ class ParallelDataset(Dataset):
         """
         Return a sentences iterator.
         """
-        # np.random.seed(self.seed)
+        np.random.seed(self.seed)
+        self.seed += 1
         # 可能会影响数据的随机性
+        # 多gpu可能需要这个 不然每个进程里的数据不一样
         
         n_sentences = len(self.pos1) if n_sentences == -1 else n_sentences
         assert 0 < n_sentences <= len(self.pos1)
@@ -221,17 +223,26 @@ class ParallelDataset(Dataset):
                 return False
 
             sample_len = 0
-            sample_lens = []
-            for idx in indices:
+            sample_lens = []                
+            id = 0
+            while id < len(indices):
+                idx = indices[id]
                 sample_lens.append(max(self.lengths1[idx], self.lengths2[idx]))
+                history = sample_len
                 sample_len = max(sample_len, sample_lens[-1])
-                num_tokens = (len(batch) + 1) * sample_len
+                num_tokens = len(batch) * sample_len
                 if is_batch_full(num_tokens):
+                    # prevent a sudden increase of num_tokens (Ex. 30*50=1500 -> 31*100=3100)
+                    batch.pop()
+                    id -= 1
                     batches.append(np.array(batch))
                     batch = []
                     sample_lens = []
                     sample_len = 0
                 batch.append(idx)
+                id += 1
+                    
+                
             if len(batch) > 0:
                 batches.append(np.array(batch))
         batches = np.array(batches)

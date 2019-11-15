@@ -24,7 +24,7 @@ def build_attention_model(params, cuda=True):
         loss_fn = LabelSmoothedCrossEntropyLoss(
             params.label_smoothing,
             params.pad_index,
-            size_average=True,
+            size_average=False,
             weight=loss_weight
         )
 

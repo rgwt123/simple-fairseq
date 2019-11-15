@@ -4,6 +4,8 @@ import torch
 from torch.nn.utils import clip_grad_norm_
 from src.utils import get_optimizer
 import torch.distributed as dist
+from src.distributed_utils import all_gather_list,all_reduce_and_rescale_tensors
+from itertools import chain
 
 logger = getLogger()
 
@@ -29,6 +31,7 @@ class TrainerMT():
             'processed_w': 0,
             'loss': []
         }
+        self.sample_sizes = []
 
     def train_epoch(self):
         self.iterator = self.get_iterator()
@@ -47,6 +50,7 @@ class TrainerMT():
             checkpoint = {
                 'encoder': self.encoder.state_dict(),
                 'decoder': self.decoder.state_dict(),
+                'optimizer': self.optimizer.state_dict(),
                 'params': self.params,
                 'epoch': self.epoch,
                 'num_updates': self.optimizer._num_updates
@@ -70,14 +74,17 @@ class TrainerMT():
                 self.optimizer.zero_grad()
             encoded = self.encoder(sent1, len1)
             scores = self.decoder(encoded, sent2[:-1])
-            loss = self.decoder.loss_fn(scores.view(-1, self.decoder.n_words), sent2[1:].view(-1))
+            loss,sample_size = self.decoder.loss_fn(scores.view(-1, self.decoder.n_words), sent2[1:].view(-1))
 
             # check NaN
             if (loss != loss).data.any():
                 logger.error("NaN detected")
                 exit()
-            # optimizer
+            # optimizer            
             loss.backward()
+            self.sample_sizes.append(sample_size)
+            # print(f'forward gpu-{self.params.rank},iter-{self.n_iter}{self.enc_dec_params[0].grad.data[0][0:20]}')
+            
         except Exception as e:
             logger.error(e)
             torch.cuda.empty_cache()
@@ -87,15 +94,25 @@ class TrainerMT():
 
         if need_reduction:
             try:
+                # sample_sizes contain gpu_num*update_delay numbers of tokens like [1948, 2013, ..]
+                # print(f'before reduce sample_size:{self.params.rank},iter-{self.n_iter} {sample_sizes}')
+                # now we get the total token nums of all delay batch and all gpus
+                
                 if self.params.gpu_num > 1:
-                    size = float(dist.get_world_size())
-                #for param in self.enc_dec_params:
-                #        #dist.all_reduce(param.grad.data, op=dist.ReduceOp.SUM)
-                #    param.grad.data.mul_(1/float(self.params.update_freq))
-
-
+                    sample_sizes = all_gather_list(self.sample_sizes)
+                    sample_sizes = list(chain.from_iterable(sample_sizes))
+                    sample_size = sum(sample_sizes)
+                    grads = [p.grad.data for p in self.enc_dec_params if p.requires_grad and p.grad is not None]
+                    all_reduce_and_rescale_tensors(grads,float(sample_size)/self.params.gpu_num)
+                    # print(f'after reduce gpu-{self.params.rank},iter-{self.n_iter} {self.enc_dec_params[0].grad.data[0][0:20]}')
+                else:
+                    sample_size = sum(self.sample_sizes)
+                    for p in self.enc_dec_params:
+                        if p.requires_grad and p.grad is not None:
+                            p.grad.data.mul_(1/float(sample_size))
                 clip_grad_norm_(self.enc_dec_params, self.params.clip_grad_norm)
                 self.optimizer.step()
+                self.sample_sizes = []
 
             except Exception as e:
                 logger.error(e)

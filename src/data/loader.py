@@ -32,8 +32,7 @@ def load_data(params, name='train'):
     params.tgt_n_words = len(tgt_dico)
 
     if name == 'train':
-        para_data = ParallelDataset(data['src_sentences'], data['src_positions'].numpy(), data['src_dico'],
-                                data['tgt_sentences'], data['tgt_positions'].numpy(), data['tgt_dico'], params)
+        para_data = ParallelDataset(data['src_sentences'], data['src_positions'].numpy(), data['src_dico'], data['tgt_sentences'], data['tgt_positions'].numpy(), data['tgt_dico'], params)
         para_data.remove_long_sentences(params.max_len)
 
         logger.info('============ Data summary')
@@ -56,8 +55,8 @@ def index_file(params):
     positions_s = []
     sentences_s = []
     unk_words_s = {}
-
-    fs = open(params.translate_file, 'r', encoding='utf-8')
+    filename = params.translate_file
+    fs = open(filename, 'r', encoding='utf-8')
     for i, line in enumerate(fs):
         s = line.rstrip().split()
         count_unk_s = 0

@@ -10,7 +10,7 @@ def main(params):
     encoder, decoder, num_updates = build_mt_model(params)
     trainer = TrainerMT(encoder, decoder, data, params, num_updates)
 
-    for i in range(trainer.epoch, 35):
+    for i in range(trainer.epoch, 30):
         logger.info("==== Starting epoch %i ...====" % trainer.epoch)
         trainer.train_epoch()
         tqdm.write('Finish epcoh %i.' % i)
