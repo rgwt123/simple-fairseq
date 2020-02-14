@@ -13,7 +13,7 @@ from src.distributed_utils import suppress_output,is_master
 from tqdm import tqdm
 
 
-def run(params, error_queue):
+def run(params, data, error_queue):
     try:
         # start training
         logger.info(params)
@@ -23,8 +23,8 @@ def run(params, error_queue):
         torch.manual_seed(params.seed)
         logger.info('Process %s is now running in gpu:%s',os.getpid(), torch.cuda.current_device())
 
-        data = load_data(params, 'train')
-        print(data.get_iterator(shuffle=True, group_by_size=True, partition=params.rank))
+        #data = load_data(params, 'train')
+        #print(data.get_iterator(shuffle=True, group_by_size=True, partition=params.rank))
 
         encoder, decoder, num_updates = build_mt_model(params)
         trainer = TrainerMT(encoder, decoder, data, params, num_updates)
@@ -42,12 +42,12 @@ def run(params, error_queue):
         error_queue.put((params.rank, traceback.format_exc()))
 
 
-def init_processes(params, fn, error_queue):
+def init_processes(params, data, fn, error_queue):
     """ Initialize the distributed environment. """
     dist.init_process_group('nccl', init_method=params.init_method, rank=params.rank, world_size=params.gpu_num)
     logger.info('| distributed init (rank {}): {}'.format(params.rank, params.init_method))
     suppress_output(is_master(params))
-    fn(params, error_queue)
+    fn(params, data, error_queue)
 
 
 def main(params):
@@ -57,9 +57,10 @@ def main(params):
     port = random.randint(10000, 20000)
     params.init_method = 'tcp://localhost:{port}'.format(port=port)
     processes = []
+    data = load_data(params, 'train')
     for rank in range(params.gpu_num):
         params.rank = rank
-        p = mp.Process(target=init_processes, args=(params, run, error_queue, ), daemon=True)
+        p = mp.Process(target=init_processes, args=(params, data, run, error_queue, ), daemon=True)
         p.start()
         error_handler.add_child(p.pid)
         processes.append(p)
