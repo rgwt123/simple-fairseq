@@ -7,8 +7,9 @@ logger = getLogger()
 
 def main(params):
     data = load_data(params, name='train')
+    test_data = load_data(params, name='test')
     encoder, decoder, num_updates = build_mt_model(params)
-    trainer = TrainerMT(encoder, decoder, data, params, num_updates)
+    trainer = TrainerMT(encoder, decoder, data, test_data, params, num_updates)
 
     for i in range(trainer.epoch, params.max_epoch):
         logger.info("==== Starting epoch %i ...====" % trainer.epoch)

@@ -13,7 +13,7 @@ parser.add_argument("--reload_model", type=str, default='',
                     help="reload model")
 parser.add_argument("--batch_size", type=int, default=80,
                     help="batch size sentences")
-parser.add_argument("--batch_size_tokens", type=int, default=-1,
+parser.add_argument("--batch_size_tokens", type=int, default=4000,
                     help="batch size tokens")
 parser.add_argument("--src_n_words", type=int, default=0,
                     help="data")
@@ -63,17 +63,23 @@ parser.add_argument("--clip_grad_norm", type=float, default=5.0,
 parser.add_argument("--update_freq", type=int, default=1)
 parser.add_argument("--optim", type=str, default="adam_inverse_sqrt,lr=0.0005")
 parser.add_argument("--gpu_num", type=int, default=1)
+parser.add_argument("--checkpoint_dir", type=str, default="all_models/base")
+parser.add_argument("--seed", type=int, default=1244)
+parser.add_argument("--max_epoch", type=int, default=5)
+parser.add_argument("--save_freq_update", type=int, default=5000)
+parser.add_argument("--save_optimizer", type=bool, default=False,
+                    help="save optimizer parameters")
+parser.add_argument("--do_eval", type=bool, default=True,
+                    help="do evalution during training")
+parser.add_argument("--model_name",type=str, default="")
+parser.add_argument("--src_dico_file", type=str, default='')
+parser.add_argument("--tgt_dico_file", type=str, default='')
+parser.add_argument("--translate_file", type=str, default='')
+parser.add_argument("--reference_file", type=str, default='')
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
     params = parser.parse_args()
-    params.batch_size_tokens = 4000
-    params.checkpoint_dir = 'all_models/base'
-    params.update_freq = 2
-    params.seed = 1244
-    params.gpu_num = 4
-    params.max_epoch = 10
 
     if params.gpu_num == 1:
         from single_train import main

@@ -8,7 +8,6 @@ import subprocess
 import re
 
 logger = create_logger('translate.log')
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 parser = argparse.ArgumentParser(description='Settings')
 parser.add_argument("--train_data", type=str, default='',
@@ -68,16 +67,17 @@ parser.add_argument("--length_penalty", type=float, default=1.0,
                     help="length penalty")
 parser.add_argument("--clip_grad_norm", type=float, default=5.0,
                     help="clip grad norm")
-parser.add_argument("--id",type=int, default=0)
-parser.add_argument("--checkpoint_dir", type=str, default='all_models/en2de_samewithcontextbatch')
+parser.add_argument("--model_name",type=str, default="")
+parser.add_argument("--checkpoint_dir", type=str, default='')
+parser.add_argument("--src_dico_file", type=str, default='')
+parser.add_argument("--tgt_dico_file", type=str, default='')
+parser.add_argument("--translate_file", type=str, default='')
+parser.add_argument("--gpu_num", type=int, default=1)
+parser.add_argument("--seed", type=int, default=1234)
+parser.add_argument("--reference_file", type=str, default='')
 params = parser.parse_args()
-params.gpu_num = 1
-params.seed = 1234
-params.reload_model = '{}/model_epoch{}.pt'.format(params.checkpoint_dir, params.id)
-params.translate_file = ''
-params.src_dico_file = 'data/vocab.zh'
-params.tgt_dico_file = 'data/vocab.en'
-params.out_file = '{}/predict_{}.en'.format(params.checkpoint_dir, params.id)
+params.reload_model = '{}/{}'.format(params.checkpoint_dir, params.model_name)
+params.out_file = '{}/predict_{}'.format(params.checkpoint_dir, params.model_name[:-3])
 if __name__ == '__main__':
     data = load_data(params, name='test')
     encoder, decoder, _ = build_mt_model(params)
@@ -97,15 +97,17 @@ if __name__ == '__main__':
             logger.info('Translating %i sentences.' % total)
             for j in bak_order.argsort().tolist():
                 file.write(params.tgt_dico.idx2string(sent2[:, j]).replace('@@ ', '')+'\n')
-    '''
+    file.close()
     # calculate bleu value
-    command = f'perl multi-bleu.perl ../data/en-de/newstest2018.de.tok < {params.out_file}'
+    '''
+    command = f'perl scripts/multi-bleu.perl {params.reference_file} < {params.out_file}'
+    print(command)
     p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
     result = p.communicate()[0].decode("utf-8")
     bleu = re.findall(r"BLEU = (.+?),", result)[0]
-    print(bleu)
     logger.info(result)
+    logger.info(bleu)
     file.close()
     with open('{}/bleu.log'.format(params.checkpoint_dir),'a+') as f:
-        f.write(str(params.id)+' '+result)
+        f.write(str(params.model_name)+' '+result)
     '''

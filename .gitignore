@@ -1,0 +1,13 @@
+.DS_Store
+*.swp
+*.pyc
+*.egg-info/
+.eggs/
+.idea/
+.tox/
+.pytest_cache/*
+__pycache__/
+/build
+/dist
+/all_models
+/all_datas
